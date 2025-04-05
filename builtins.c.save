@@ -1,0 +1,145 @@
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "builtins.h"
+#include "io_helpers.h"
+#include "variables.h"
+
+// ====== Command execution =====
+
+/* Return: index of builtin or -1 if cmd doesn't match a builtin
+ */
+bn_ptr check_builtin(const char *cmd) {
+    ssize_t cmd_num = 0;
+    while (cmd_num < BUILTINS_COUNT &&
+           strncmp(BUILTINS[cmd_num], cmd, MAX_STR_LEN) != 0) {
+        cmd_num += 1;
+    }
+    return BUILTINS_FN[cmd_num];
+}
+
+int contains_var(const char *str) {
+	while (*str) {
+		if (*str == '$') {
+			return 1;
+		}
+	str++;
+	}
+	return 0;
+}
+
+// ===== Builtins =====
+
+/* Prereq: tokens is a NULL terminated sequence of strings.
+ * Return 0 on success and -1 on error ... but there are no errors on echo. 
+ */
+ssize_t bn_echo(char **tokens) {
+    ssize_t index = 1;
+    int counter = 0;
+    //char *t;
+    //const char s[2] = "$";
+    if (tokens[index] != NULL) {
+        // TODO:
+        // Implement the echo command
+	if (tokens[index][0] == '$' && tokens[index][1] == '\0') {
+		display_message("$");
+	}
+	if (tokens[index][0] == '$') {
+		//const char *value = get_variable(tokens[index]+1);
+		//char *dup = NULL;
+		if (contains_var(tokens[index])) {
+			char *expanded = expand_variables(tokens[index]);
+			char trunc[MAX_STR_LEN+1] = {0};
+			if (expanded != NULL) {
+				while (counter < MAX_STR_LEN && expanded[counter] != '\0') {
+					trunc[counter] = expanded[counter];
+					counter ++;
+				}
+				display_message(trunc);
+			}
+			free(expanded);
+		}
+		/*
+		if (value != NULL) {
+			dup = strdup(value);
+			display_message(dup);
+			free(dup);
+		} else {
+			if (contains_var(tokens[index]+1)) {
+				t = strtok(tokens[index]+1, s);
+				while (t != NULL) {
+					value = get_variable(t);
+					if (value != NULL) {
+						dup = strdup(value);
+						display_message(dup);
+						free(dup);
+					}
+					t = strtok(NULL,s);
+				}
+			} else {
+			display_message("");
+			}
+		}
+	} else {
+	*/
+	} else {
+	display_message(tokens[index]);
+	}
+	index += 1;
+    }
+    while (tokens[index] != NULL) {
+        // TODO:
+        // Implement the echo command
+	display_message(" ");
+	if ((tokens[index][0] == '$')) {
+		//const char *value = get_variable(tokens[index] + 1);
+		//char *dup = NULL;
+		if (contains_var(tokens[index])) {
+			char *expanded = expand_variables(tokens[index]);
+			char trunc[MAX_STR_LEN+1] = {0};
+			if (expanded != NULL) {
+				while (counter < MAX_STR_LEN && expanded[counter] != '\0') {
+					trunc[counter] = expanded[counter];
+					counter++;
+				}
+				trunc[counter] = '\0';
+				display_message(trunc);
+			}
+			free(expanded);
+		}
+	} else {
+
+		/*
+		if (value != NULL) {
+			dup = strdup(value);
+			display_message(dup);
+			free(dup);
+		} else {
+			if (contains_var(tokens[index]+1)) {
+				t = strtok(tokens[index]+1,s);
+				while (t != NULL) {
+					value = get_variable(t);
+					if (value != NULL) {
+						dup = strdup(value);
+						display_message(dup);
+						free(dup);
+					}
+					t = strtok(NULL, s);
+				}
+			} else {
+			display_message("");
+			}
+		}
+	} else {
+		*/
+	display_message(tokens[index]);
+	}
+	index += 1;
+    }
+    display_message("\n");
+
+    return 0;
+}
+
+
+
