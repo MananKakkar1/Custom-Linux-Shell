@@ -2,9 +2,8 @@
 #define SERVER_H
 
 #include <netinet/in.h>
-#include "builtins.h"
 
-typedef struct {
+typedef struct listen_sock{
     struct sockaddr_in *addr;
     int sock_fd;
     int client_count;

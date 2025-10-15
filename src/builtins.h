@@ -49,7 +49,7 @@ ssize_t bn_start_client(char **tokens);
 ssize_t bn_start_server(char **tokens);
 ssize_t bn_send(char **tokens);
 ssize_t bn_close_server(char **tokens);
-
+ssize_t bn_gpt(char **tokens);
 /* Return: index of builtin or -1 if cmd doesn't match a builtin
  */
 bn_ptr check_builtin(const char *cmd);
@@ -57,8 +57,8 @@ bn_ptr check_builtin(const char *cmd);
 
 /* BUILTINS and BUILTINS_FN are parallel arrays of length BUILTINS_COUNT
  */
-static const char * const BUILTINS[] = {"kill", "ps", "ls", "cat", "cd", "wc", "echo", "start-server", "close-server", "send", "start-client"};
-static const bn_ptr BUILTINS_FN[] = {bn_kill, bn_ps, bn_ls, bn_cat, bn_cd, bn_wc, bn_echo, bn_start_server, bn_close_server, bn_send, bn_start_client, NULL};    // Extra null element for 'non-builtin'
+static const char * const BUILTINS[] = {"kill", "ps", "ls", "cat", "cd", "wc", "echo", "gpt", "start-server", "close-server", "send", "start-client"};
+static const bn_ptr BUILTINS_FN[] = {bn_kill, bn_ps, bn_ls, bn_cat, bn_cd, bn_wc, bn_echo, bn_gpt, bn_start_server, bn_close_server, bn_send, bn_start_client, NULL};    // Extra null element for 'non-builtin'
 static const ssize_t BUILTINS_COUNT = sizeof(BUILTINS) / sizeof(char *);
 
 #endif

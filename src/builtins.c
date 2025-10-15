@@ -16,6 +16,10 @@
 #include <sys/socket.h>
 #include <assert.h>
 #include "server.h"
+#define GPT_PROMPT "(gpt)>"
+#define MAX_GPT_OUTPUT 4096
+#define GPT_MAX_INPUT 4096
+
 char *path_error = "Invalid path";
 char *input_error = "No input source provided";
 char *file_not_open = "Cannot open file";
@@ -37,7 +41,7 @@ ssize_t bg_process_count = 0;
 int curr_port_in_use = 0;
 int server_running = 0;
 int sigint_received = 0;
-
+extern int call_gpt_api(const char *prompt);
 void sigint_handler2(int code) {
 	(void)code;
 	return;
@@ -434,7 +438,48 @@ ssize_t bn_echo(char **tokens) {
     return 0;
 }
 
+ssize_t bn_gpt(char **tokens) {
+	if (tokens[1] != NULL) {
+        	// Reconstruct the prompt string from tokens[1..]
+        	char buffer[GPT_MAX_INPUT] = {0};
+        	for (int i = 1; tokens[i] != NULL; i++) {
+            		strncat(buffer, tokens[i], GPT_MAX_INPUT - strlen(buffer) - 1);
+            		if (tokens[i+1] != NULL) strncat(buffer, " ", GPT_MAX_INPUT - strlen(buffer) - 1);
+        	}
+        	call_gpt_api(buffer);
+        	return 0;
+    	}
 
+	char input[GPT_MAX_INPUT];
+	display_message("Entering GPT interaction mode. Type 'exit' to return\n");
+
+	while (1) {
+		display_message(GPT_PROMPT);
+		fflush(stdout);
+
+		if (fgets(input, GPT_MAX_INPUT, stdin) == NULL) {
+			display_message("\n");
+			break;
+		}
+
+		size_t len = strlen(input);
+		if (len > 0 && input[len - 1] == '\n') {
+			input[len - 1] = '\0';
+		}
+
+		if (strcmp(input, "exit") == 0) {
+			display_message("Exiting GPT mode.\n");
+			break;
+		}
+
+		if (strlen(input) == 0) {
+			continue;
+		}
+
+		call_gpt_api(input);
+	}
+	return 0;
+}
 ssize_t bn_start_server(char **tokens) {
     if (tokens[1] == NULL) {
         display_error("ERROR: ", "No port provided");
@@ -554,6 +599,7 @@ ssize_t bn_start_server(char **tokens) {
     }
     return 0;
 }
+
 
 ssize_t bn_close_server(char **tokens) {
 	if (tokens[1] != NULL) {
