@@ -1,45 +1,83 @@
-# 🐚 Custom Linux Shell
+# Custom Shell
 
-## 📝 Project Overview
+A Unix shell written in C for UofT's CSC209. It prints a `mysh$` prompt, splits
+each line into tokens, expands variables, and runs the result as a builtin, an
+external program, or a pipeline. It also supports background jobs, a built-in TCP
+chat server, and a `gpt` command that turns plain English into a shell command.
 
-This project is a **custom-built Linux shell** developed in **C**, designed to emulate and extend the functionality of standard Unix shells like Bash. It provides a command-line interface that interprets and executes user commands, handling various shell features and system interactions.
+## Features
 
-## 🚀 Features Implemented
+- **Builtins written from scratch**: `echo`, `ls`, `cat`, `wc`, `cd`, `ps`,
+  `kill`, implemented with syscalls rather than by calling the system versions.
+- **External commands**: anything that is not a builtin is resolved on `PATH`
+  and run with `fork` + `execvp`.
+- **Pipelines**: `a | b | c`, one child per stage wired together with
+  `pipe` and `dup2`.
+- **Variables**: assign with `name=value`, reference with `$name`; expansion
+  happens before the line runs.
+- **Background jobs**: a trailing `&` returns to the prompt immediately, a
+  `SIGCHLD` handler reaps finished children, and `ps` / `kill` manage the rest.
+- **Signals**: `SIGINT` and `SIGTSTP` redraw the prompt instead of killing the
+  shell.
+- **Built-in chat server**: `start-server <port>`, `start-client <host> <port>`,
+  `send <msg>`, `close-server`. Handles multiple clients with a username
+  handshake and newline-delimited framing over non-blocking sockets.
+- **`gpt` command**: `gpt "how much disk is free"` sends the prompt to the
+  OpenAI API (`gpt-4o-mini`), prints the suggested command, and for task-style
+  prompts offers to run it through the shell's own parser. A small denylist
+  refuses obviously destructive suggestions such as `rm -rf /`, fork bombs,
+  `mkfs`, `shutdown`, and `reboot`.
 
-- **Command Parsing** 🔍  
-  Parses user input to identify commands and their arguments.
+## How a line runs
 
-- **Built-in Commands** 🛠️  
-  Implements essential built-in commands such as:
-  - `cd`: Change the current working directory.
-  - `exit`: Exit the shell session.
-  - `help`: Display information about built-in commands.
+```mermaid
+flowchart TD
+    A["read line at mysh$"] --> B["tokenize on whitespace"]
+    B --> C["expand $variables"]
+    C --> D{"contains a pipe?"}
+    D -- yes --> E["fork per stage, connect with pipe / dup2"]
+    D -- no --> F{"builtin?"}
+    F -- yes --> G["run builtin"]
+    F -- no --> H["fork + execvp on PATH"]
+    H --> I{"trailing &?"}
+    I -- yes --> J["record job, return to prompt"]
+    I -- no --> K["waitpid for the child"]
+```
 
-- **External Command Execution** ⚙️  
-  Executes external programs by searching the system's PATH, using system calls like `fork()` and `execvp()`.
+## Build and run
 
-- **Pipelining** 🔗  
-  Enables the use of pipes (`|`) to connect multiple commands, directing the output of one command as the input to another.
+Needs `gcc`, `libcurl`, and `cJSON`:
 
-- **Signal Handling** 🚦  
-  Handles signals such as `SIGINT` and `SIGTSTP` to manage process interruptions gracefully.
+```bash
+# Debian / Ubuntu
+sudo apt install libcurl4-openssl-dev libcjson-dev
 
-## 🔧 How It Works
+cd src
+make
+./mysh
+```
 
-1. **Initialization**: The shell initializes necessary data structures and enters a loop to continuously accept user input.
+The build runs with `-Wall -Wextra -Werror` and compiles under AddressSanitizer
+and UBSan.
 
-2. **Input Reading**: Reads a line of input from the user.
+## Using `gpt`
 
-3. **Parsing**: Tokenizes the input to separate commands, arguments, and operators (like pipes and redirection symbols).
+```bash
+export OPENAI_API_KEY=sk-...
+mysh$ gpt "how much disk is free"
+[GPT]: df -h
+[Execute] y/n: y
+```
 
-4. **Execution**:
-   - If the command is a built-in, it executes the corresponding function.
-   - If the command is external, it creates a child process using `fork()` and executes the command using `execvp()`.
+Set `GPT_DEBUG=1` to also print the raw API response.
 
-5. **Signal Handling**: Captures and handles signals to ensure the shell remains responsive and stable.
+## Source layout
 
-6. **Loop Continuation**: After executing the command(s), the shell returns to step 2, awaiting the next user input.
-
----
-
-Feel free to explore the codebase to understand the implementation details and customize it to fit your specific needs! 😊
+| File | Responsibility |
+|------|----------------|
+| `mysh.c` | prompt loop, signal setup, top-level dispatch |
+| `io_helpers.c` | input reading, tokenizing, `$var` expansion, output |
+| `builtins.c` | builtin implementations and the background-job table |
+| `commands.c` | external exec, pipelines, chat server and client |
+| `variables.c` | shell variable storage |
+| `gpt.c` | OpenAI request, response parsing, execute-confirm prompt |
