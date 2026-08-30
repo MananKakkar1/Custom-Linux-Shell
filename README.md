@@ -1,6 +1,6 @@
 # Custom Shell
 
-A Unix shell written in C for UofT's CSC209. It reads a line at the `mysh$`
+A Unix shell written in C. It reads a line at the `mysh$`
 prompt, splits it into whitespace tokens, expands `$variables`, and runs the
 result as a builtin, an external program, or a pipeline. On top of the base
 shell it adds background jobs, a forked TCP chat server with a matching client,
